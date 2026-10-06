@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.O.G.V. - Sistema Operativo Gestione Vigilanza</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12',
+                            custom: '#D4AF37',
+                            hover: '#B59223',
+                            light: '#FFF9E6'
+                        },
+                        slate: {
+                            850: '#131e32'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+        .gold-gradient {
+            background: linear-gradient(135deg, #D4AF37 0%, #EAB308 100%);
+        }
+        .gold-border {
+            border-color: #D4AF37;
+        }
+        .gold-glow {
+            box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.25);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D4AF37;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-amber-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-lg gold-gradient flex items-center justify-center text-white text-xl font-bold mr-3 shadow-md">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                            S.O.G.V.
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold border border-amber-300">v3.0</span>
+                        </h1>
+                        <p class="text-xs text-slate-500 font-medium">Gestione Operativa Vigilanza Privata</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="hidden md:flex space-x-1 items-center">
+                    <button onclick="switchTab('servizio')" id="tab-btn-servizio" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-all bg-amber-50 text-amber-900 border border-amber-300">
+                        <i class="fa-solid fa-clipboard-check text-amber-600"></i> Registro Servizio
+                    </button>
+                    <button onclick="switchTab('obiettivi')" id="tab-btn-obiettivi" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 text-slate-600 hover:text-amber-700 hover:bg-amber-50/50 transition-all">
+                        <i class="fa-solid fa-building-shield text-slate-400"></i> Gestione Obiettivi
+                    </button>
+                    <button onclick="switchTab('checklist')" id="tab-btn-checklist" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 text-slate-600 hover:text-amber-700 hover:bg-amber-50/50 transition-all">
+                        <i class="fa-solid fa-car text-slate-400"></i> Checklist Mezzo
+                    </button>
+                    <button onclick="switchTab('report')" id="tab-btn-report" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 text-slate-600 hover:text-amber-700 hover:bg-amber-50/50 transition-all">
+                        <i class="fa-solid fa-chart-pie text-slate-400"></i> Report & Export
+                    </button>
+                </div>
+
+                <!-- Turno Status -->
+                <div class="flex items-center gap-3">
+                    <div id="turno-status-badge" class="hidden sm:flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span> Turno Attivo
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation bar -->
+        <div class="md:hidden flex justify-around bg-slate-900 text-white text-xs py-2 border-t border-amber-500">
+            <button onclick="switchTab('servizio')" id="mobile-btn-servizio" class="flex flex-col items-center py-1 px-3 text-amber-400 font-bold">
+                <i class="fa-solid fa-clipboard-check text-base"></i> Servizio
+            </button>
+            <button onclick="switchTab('obiettivi')" id="mobile-btn-obiettivi" class="flex flex-col items-center py-1 px-3 text-slate-400">
+                <i class="fa-solid fa-building-shield text-base"></i> Obiettivi
+            </button>
+            <button onclick="switchTab('checklist')" id="mobile-btn-checklist" class="flex flex-col items-center py-1 px-3 text-slate-400">
+                <i class="fa-solid fa-car text-base"></i> Mezzo
+            </button>
+            <button onclick="switchTab('report')" id="mobile-btn-report" class="flex flex-col items-center py-1 px-3 text-slate-400">
+                <i class="fa-solid fa-chart-pie text-base"></i> Report
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- SECTION 1: SERVIZIO ISPEZIONE -->
+        <section id="section-servizio" class="space-y-6">
+            <!-- Turn Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Pattuglia</p>
+                        <p id="card-pattuglia" class="text-lg font-bold text-slate-800">Pattuglia 01</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-walkie-talkie"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Guardia</p>
+                        <p id="card-guardia" class="text-lg font-bold text-slate-800">G.P.G. Rossi</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Ispezioni Eseguite</p>
+                        <p id="card-tot-ispezioni" class="text-2xl font-black text-amber-600">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Anomalie Riscontrate</p>
+                        <p id="card-tot-anomalie" class="text-2xl font-black text-rose-600">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Stato Passaggi Obiettivi -->
+            <div class="bg-white rounded-2xl border border-amber-200 p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-tasks text-amber-500"></i> Stato Passaggi Turno per Cliente
+                    </h3>
+                    <span id="passaggi-totali-badge" class="text-xs bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-full">0/0 Completati</span>
+                </div>
+                <div id="grid-passaggi-obiettivi" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Dinamicamente popolato con lo stato dei passaggi -->
+                </div>
+            </div>
+
+            <!-- Form Registrazione Nuova Ispezione -->
+            <div class="bg-white rounded-2xl border border-amber-200 p-6 shadow-md gold-glow">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-amber-500"></i> Registra Ispezione / Controllo
+                    </h2>
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 text-amber-800" id="live-clock">00:00:00</span>
+                </div>
+
+                <form id="form-ispezione" onsubmit="salvaIspezione(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Select Obiettivo -->
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Obiettivo / Cliente <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="ispezione-obiettivo" required onchange="aggiornaDettagliObiettivoSelezionato()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-medium">
+                                <option value="">-- Seleziona un Obiettivo --</option>
+                            </select>
+                        </div>
+
+                        <!-- Ora Controllo -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ora Ispezione</label>
+                            <div class="flex gap-2">
+                                <input type="time" id="ispezione-ora" required class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                                <button type="button" onclick="setOraAttuale()" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs transition" title="Imposta ora corrente">
+                                    Ora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Box Info Rapida Obiettivo -->
+                    <div id="box-info-obiettivo" class="hidden p-3 bg-amber-50/70 rounded-lg border border-amber-200 text-xs text-slate-700">
+                        <div class="font-bold text-amber-900 flex items-center justify-between">
+                            <div>
+                                <i class="fa-solid fa-circle-info text-amber-600"></i> <span id="info-obj-nome"></span> - <span id="info-obj-indirizzo" class="font-normal text-slate-600"></span>
+                            </div>
+                            <span id="info-obj-passaggi-status" class="px-2 py-0.5 rounded font-bold bg-amber-200 text-amber-900"></span>
+                        </div>
+                        <p id="info-obj-note" class="mt-1 text-slate-600 italic"></p>
+                    </div>
+
+                    <!-- Esito Ispezione & Preset Rapidi -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Esito Ispezione</label>
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <button type="button" onclick="setEsitoPreset('REGOLARE', 'Tutto regolare. Accessi chiusi, perimetro privo di anomalie.')" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                                <i class="fa-solid fa-circle-check text-emerald-600"></i> TUTTO REGOLARE
+                            </button>
+                            <button type="button" onclick="setEsitoPreset('ANOMALIA', 'Riscontrata anomalia: ')" class="px-3 py-1.5 bg-rose-50 text-rose-800 border border-rose-300 hover:bg-rose-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                                <i class="fa-solid fa-triangle-exclamation text-rose-600"></i> ANOMALIA / ALLARME
+                            </button>
+                            <button type="button" onclick="setEsitoPreset('CONTROLLO PERIMETRALE', 'Eseguito controllo perimetrale esterno. Nulla da segnalare.')" class="px-3 py-1.5 bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                                <i class="fa-solid fa-eye text-slate-600"></i> PERIMETRALE OK
+                            </button>
+                        </div>
+                        <textarea id="ispezione-note" rows="3" placeholder="Inserisci dettagli, note operative o descrizioni di anomalie..." class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-3 text-sm focus:ring-2 focus:ring-amber-500" required></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="w-full sm:w-auto px-6 py-2.5 gold-gradient hover:opacity-95 text-slate-950 font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> REGISTRA PASSAGGIO
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabella Registro Ispezioni -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-amber-500"></i> Registro Ispezioni Turno Corrente
+                    </h3>
+                    <span id="ispezioni-count-badge" class="text-xs bg-slate-200 text-slate-700 font-bold px-2.5 py-1 rounded-full">0 Registrazioni</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-700">
+                        <thead class="bg-slate-100 text-slate-600 uppercase text-xs border-b border-slate-200">
+                            <tr>
+                                <th class="p-3 font-bold">Ora</th>
+                                <th class="p-3 font-bold">Obiettivo / Indirizzo</th>
+                                <th class="p-3 font-bold">Passaggio N°</th>
+                                <th class="p-3 font-bold">Esito & Dettagli</th>
+                                <th class="p-3 font-bold text-right">Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-ispezioni" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-slate-400 italic">
+                                    Nessuna ispezione registrata nel turno corrente.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: GESTIONE OBIETTIVI -->
+        <section id="section-obiettivi" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm gold-glow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-building-shield text-amber-500"></i> Gestione Anagrafica Obiettivi
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Configura gli obiettivi di vigilanza e imposta il numero di passaggi richiesti per turno.</p>
+                </div>
+            </div>
+
+            <!-- Form Aggiungi/Modifica Obiettivo -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <h3 id="form-obiettivi-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-plus-circle text-amber-500"></i> Aggiungi Nuovo Obiettivo
+                    </h3>
+                    <button id="btn-annulla-modifica-obj" type="button" onclick="resetFormObiettivo()" class="hidden text-xs text-slate-500 hover:text-slate-800 underline font-semibold">
+                        Annulla Modifica
+                    </button>
+                </div>
+
+                <form id="form-obiettivo" onsubmit="salvaObiettivo(event)" class="space-y-4">
+                    <input type="hidden" id="obj-id-edit" value="">
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Nome Obiettivo / Cliente <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="obj-nome" required placeholder="Es. Banca Sella - Filiale Centro" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Indirizzo <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="obj-indirizzo" required placeholder="Es. Via Roma 45" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                Passaggi Richiesti per Turno <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" id="obj-passaggi" min="1" max="20" value="1" required class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Note Operative / Codici Allarme</label>
+                        <textarea id="obj-note" rows="2" placeholder="Es. Codice inserimento tastiera #1234..." class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-3 text-sm focus:ring-2 focus:ring-amber-500"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button" onclick="resetFormObiettivo()" class="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg transition">
+                            Reset
+                        </button>
+                        <button id="btn-submit-obiettivo" type="submit" class="px-6 py-2 gold-gradient hover:opacity-95 text-slate-950 font-bold text-sm rounded-lg shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> AGGIUNGI OBIETTIVO
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lista Obiettivi -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-list text-amber-500"></i> Elenco Obiettivi Registrati
+                    </h3>
+                    <span id="obiettivi-count-badge" class="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full border border-amber-300">0 Presenti</span>
+                </div>
+                <div id="container-obiettivi-list" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: CHECKLIST MEZZO -->
+        <section id="section-checklist" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-car text-amber-500"></i> Checklist & Stato Mezzo Operativo
+                </h2>
+                <p class="text-xs text-slate-500 mb-6">Compila la verifica del veicolo prima dell'inizio del turno.</p>
+                <!-- Form contenuto regolare -->
+            </div>
+        </section>
+
+        <!-- SECTION 4: REPORT & EXPORT -->
+        <section id="section-report" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-amber-500"></i> Report & Resoconto Turno
+                </h2>
+                <p class="text-xs text-slate-500 mb-4">Esporta il registro di servizio aggiornato con i passaggi del turno.</p>
+                <button onclick="esportaPDFReport()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl shadow transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> Esporta Report PDF
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Stato Applicazione
+        let statoApp = {
+            obiettivi: [
+                { id: '1', nome: 'Banca Sella - Filiale Centro', indirizzo: 'Via Roma 45', passaggiRichiesti: 3, note: 'Tastiera allarme codice #1234' },
+                { id: '2', nome: 'Supermercato Conad', indirizzo: 'Via Milano 12', passaggiRichiesti: 2, note: 'Verificare porte posteriori ditta scarico' },
+                { id: '3', nome: 'Zona Industriale Lotto 3', indirizzo: 'Via Delle Industrie 88', passaggiRichiesti: 1, note: 'Giro perimetrale completo con fari' }
+            ],
+            ispezioni: []
+        };
+
+        // Inizializzazione Dom
+        document.addEventListener('DOMContentLoaded', () => {
+            caricaDatiLocali();
+            aggiornaOrologio();
+            setInterval(aggiornaOrologio, 1000);
+            setOraAttuale();
+            renderTutto();
+        });
+
+        function aggiornaOrologio() {
+            const now = new Date();
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString('it-IT');
+        }
+
+        function setOraAttuale() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('ispezione-ora').value = `${hours}:${minutes}`;
+        }
+
+        function switchTab(tabId) {
+            ['servizio', 'obiettivi', 'checklist', 'report'].forEach(id => {
+                document.getElementById(`section-${id}`).classList.add('hidden');
+            });
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+        }
+
+        // Calcolo Passaggi
+        function getPassaggiEffettuatiObiettivo(objId) {
+            return statoApp.ispezioni.filter(i => i.obiettivoId === objId).length;
+        }
+
+        // Render Globale
+        function renderTutto() {
+            renderSelectObiettivi();
+            renderDashboardPassaggi();
+            renderObiettiviList();
+            renderIspezioniTable();
+            aggiornaContatori();
+        }
+
+        // Dashboard Passaggi
+        function renderDashboardPassaggi() {
+            const container = document.getElementById('grid-passaggi-obiettivi');
+            container.innerHTML = '';
+
+            let passaggiTotaliRichiesti = 0;
+            let passaggiTotaliEseguiti = 0;
+
+            statoApp.obiettivi.forEach(obj => {
+                const eseguiti = getPassaggiEffettuatiObiettivo(obj.id);
+                const richiesti = parseInt(obj.passaggiRichiesti) || 1;
+
+                passaggiTotaliRichiesti += richiesti;
+                passaggiTotaliEseguiti += Math.min(eseguiti, richiesti);
+
+                const completato = eseguiti >= richiesti;
+                const percentuale = Math.min(100, Math.round((eseguiti / richiesti) * 100));
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border text-xs flex flex-col justify-between ${completato ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'}`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-slate-800 text-sm truncate pr-2">${obj.nome}</span>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${completato ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-100 text-amber-800'}">
+                            ${eseguiti}/${richiesti} ${completato ? '<i class="fa-solid fa-check ml-1"></i>' : ''}
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 mb-1 overflow-hidden">
+                        <div class="h-2 rounded-full ${completato ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${percentuale}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('passaggi-totali-badge').innerText = `${passaggiTotaliEseguiti}/${passaggiTotaliRichiesti} Completati`;
+        }
+
+        // Select Form Ispezione
+        function renderSelectObiettivi() {
+            const select = document.getElementById('ispezione-obiettivo');
+            select.innerHTML = '<option value="">-- Seleziona un Obiettivo --</option>';
+
+            statoApp.obiettivi.forEach(obj => {
+                const eseguiti = getPassaggiEffettuatiObiettivo(obj.id);
+                const opt = document.createElement('option');
+                opt.value = obj.id;
+                opt.innerText = `${obj.nome} (${eseguiti}/${obj.passaggiRichiesti} passaggi)`;
+                select.appendChild(opt);
+            });
+        }
+
+        function aggiornaDettagliObiettivoSelezionato() {
+            const objId = document.getElementById('ispezione-obiettivo').value;
+            const box = document.getElementById('box-info-obiettivo');
+            if (!objId) {
+                box.classList.add('hidden');
+                return;
+            }
+            const obj = statoApp.obiettivi.find(o => o.id === objId);
+            if (obj) {
+                const eseguiti = getPassaggiEffettuatiObiettivo(obj.id);
+                document.getElementById('info-obj-nome').innerText = obj.nome;
+                document.getElementById('info-obj-indirizzo').innerText = obj.indirizzo;
+                document.getElementById('info-obj-note').innerText = obj.note || 'Nessuna nota presente';
+                document.getElementById('info-obj-passaggi-status').innerText = `Passaggio ${eseguiti + 1} di ${obj.passaggiRichiesti}`;
+                box.classList.remove('hidden');
+            }
+        }
+
+        function setEsitoPreset(titolo, testo) {
+            document.getElementById('ispezione-note').value = `[${titolo}] ${testo}`;
+        }
+
+        // Salva Ispezione
+        function salvaIspezione(e) {
+            e.preventDefault();
+            const objId = document.getElementById('ispezione-obiettivo').value;
+            const ora = document.getElementById('ispezione-ora').value;
+            const note = document.getElementById('ispezione-note').value;
+
+            const obj = statoApp.obiettivi.find(o => o.id === objId);
+            const passaggiEseguiti = getPassaggiEffettuatiObiettivo(objId) + 1;
+
+            const nuovaIspezione = {
+                id: Date.now().toString(),
+                obiettivoId: objId,
+                nomeObiettivo: obj ? obj.nome : 'N/A',
+                indirizzo: obj ? obj.indirizzo : '',
+                ora: ora,
+                note: note,
+                numeroPassaggio: passaggiEseguiti,
+                isAnomalia: note.toUpperCase().includes('ANOMALIA') || note.toUpperCase().includes('ALLARME')
+            };
+
+            statoApp.ispezioni.unshift(nuovaIspezione);
+            salvaDatiLocali();
+            renderTutto();
+
+            document.getElementById('ispezione-note').value = '';
+            document.getElementById('ispezione-obiettivo').value = '';
+            document.getElementById('box-info-obiettivo').classList.add('hidden');
+            setOraAttuale();
+        }
+
+        // Render Tabella Ispezioni
+        function renderIspezioniTable() {
+            const tbody = document.getElementById('tbody-ispezioni');
+            tbody.innerHTML = '';
+
+            if (statoApp.ispezioni.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400 italic">Nessuna ispezione registrata nel turno corrente.</td></tr>`;
+                return;
+            }
+
+            statoApp.ispezioni.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-900">${item.ora}</td>
+                    <td class="p-3">
+                        <div class="font-bold text-slate-800">${item.nomeObiettivo}</div>
+                        <div class="text-xs text-slate-500">${item.indirizzo}</div>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-bold text-xs">
+                            Passaggio #${item.numeroPassaggio}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <span class="text-xs ${item.isAnomalia ? 'text-rose-600 font-bold' : 'text-slate-700'}">${item.note}</span>
+                    </td>
+                    <td class="p-3 text-right">
+                        <button onclick="eliminaIspezione('${item.id}')" class="text-rose-500 hover:text-rose-700 text-xs font-bold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function eliminaIspezione(id) {
+            statoApp.ispezioni = statoApp.ispezioni.filter(i => i.id !== id);
+            salvaDatiLocali();
+            renderTutto();
+        }
+
+        // Gestione Anagrafica Obiettivi
+        function salvaObiettivo(e) {
+            e.preventDefault();
+            const idEdit = document.getElementById('obj-id-edit').value;
+            const nome = document.getElementById('obj-nome').value;
+            const indirizzo = document.getElementById('obj-indirizzo').value;
+            const passaggi = parseInt(document.getElementById('obj-passaggi').value) || 1;
+            const note = document.getElementById('obj-note').value;
+
+            if (idEdit) {
+                const obj = statoApp.obiettivi.find(o => o.id === idEdit);
+                if (obj) {
+                    obj.nome = nome;
+                    obj.indirizzo = indirizzo;
+                    obj.passaggiRichiesti = passaggi;
+                    obj.note = note;
+                }
+            } else {
+                statoApp.obiettivi.push({
+                    id: Date.now().toString(),
+                    nome,
+                    indirizzo,
+                    passaggiRichiesti: passaggi,
+                    note
+                });
+            }
+
+            salvaDatiLocali();
+            resetFormObiettivo();
+            renderTutto();
+        }
+
+        function resetFormObiettivo() {
+            document.getElementById('form-obiettivo').reset();
+            document.getElementById('obj-id-edit').value = '';
+            document.getElementById('form-obiettivi-title').innerHTML = `<i class="fa-solid fa-plus-circle text-amber-500"></i> Aggiungi Nuovo Obiettivo`;
+            document.getElementById('btn-submit-obiettivo').innerHTML = `<i class="fa-solid fa-plus"></i> AGGIUNGI OBIETTIVO`;
+            document.getElementById('btn-annulla-modifica-obj').classList.add('hidden');
+        }
+
+        function editaObiettivo(id) {
+            const obj = statoApp.obiettivi.find(o => o.id === id);
+            if (!obj) return;
+            document.getElementById('obj-id-edit').value = obj.id;
+            document.getElementById('obj-nome').value = obj.nome;
+            document.getElementById('obj-indirizzo').value = obj.indirizzo;
+            document.getElementById('obj-passaggi').value = obj.passaggiRichiesti;
+            document.getElementById('obj-note').value = obj.note;
+
+            document.getElementById('form-obiettivi-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-500"></i> Modifica Obiettivo`;
+            document.getElementById('btn-submit-obiettivo').innerHTML = `<i class="fa-solid fa-check"></i> AGGIORNA OBIETTIVO`;
+            document.getElementById('btn-annulla-modifica-obj').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function eliminaObiettivo(id) {
+            if (confirm('Sicuro di voler eliminare questo obiettivo?')) {
+                statoApp.obiettivi = statoApp.obiettivi.filter(o => o.id !== id);
+                salvaDatiLocali();
+                renderTutto();
+            }
+        }
+
+        function renderObiettiviList() {
+            const container = document.getElementById('container-obiettivi-list');
+            container.innerHTML = '';
+
+            statoApp.obiettivi.forEach(obj => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-slate-900 text-sm">${obj.nome}</h4>
+                            <span class="text-xs bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded">
+                                ${obj.passaggiRichiesti} ${obj.passaggiRichiesti > 1 ? 'passaggi' : 'passaggio'}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>${obj.indirizzo}</p>
+                        <p class="text-xs text-slate-600 italic mt-2">${obj.note || 'Nessuna nota presente'}</p>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-4 pt-2 border-t border-slate-200">
+                        <button onclick="editaObiettivo('${obj.id}')" class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold hover:bg-amber-200">
+                            Modifica
+                        </button>
+                        <button onclick="eliminaObiettivo('${obj.id}')" class="px-2 py-1 bg-rose-100 text-rose-800 rounded text-xs font-bold hover:bg-rose-200">
+                            Elimina
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function aggiornaContatori() {
+            document.getElementById('card-tot-ispezioni').innerText = statoApp.ispezioni.length;
+            document.getElementById('card-tot-anomalie').innerText = statoApp.ispezioni.filter(i => i.isAnomalia).length;
+            document.getElementById('ispezioni-count-badge').innerText = `${statoApp.ispezioni.length} Registrazioni`;
+            document.getElementById('obiettivi-count-badge').innerText = `${statoApp.obiettivi.length} Presenti`;
+        }
+
+        // Local Storage
+        function salvaDatiLocali() {
+            localStorage.setItem('sogv_data', JSON.stringify(statoApp));
+        }
+
+        function caricaDatiLocali() {
+            const data = localStorage.getItem('sogv_data');
+            if (data) {
+                statoApp = JSON.parse(data);
+            }
+        }
+    </script>
+</body>
+</html>
